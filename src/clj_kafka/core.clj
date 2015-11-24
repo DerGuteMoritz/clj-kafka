@@ -6,7 +6,7 @@
            [kafka.cluster Broker]
            ))
 
-(defrecord KafkaMessage [topic offset partition key value])
+(defrecord KafkaMessage [topic offset next-offset partition key value])
 
 (defn as-properties
   [m]
@@ -22,6 +22,11 @@
        (finally
         (~close-fn ~(binding 0))))))
 
+(defn byte-buffer-bytes [^ByteBuffer bb]
+  (let [b (byte-array (.remaining bb))]
+    (.get bb b)
+    b))
+
 (defprotocol ToClojure
   (to-clojure [x] "Converts type to Clojure structure"))
 
@@ -30,16 +35,12 @@
   (to-clojure [x] nil)
 
   MessageAndMetadata
-  (to-clojure [x] (KafkaMessage. (.topic x) (.offset x) (.partition x) (.key x) (.message x)))
+  (to-clojure [x] (KafkaMessage. (.topic x) (.offset x) nil (.partition x) (.key x) (.message x)))
 
   MessageAndOffset
   (to-clojure [x]
-    (letfn [(byte-buffer-bytes [^ByteBuffer bb] (let [b (byte-array (.remaining bb))]
-                                      (.get bb b)
-                                      b))]
-      (let [offset (.offset x)
-            msg (.message x)]
-        (KafkaMessage. nil offset nil (.key msg) (byte-buffer-bytes (.payload msg))))))
+    (let [msg (.message x)]
+      (KafkaMessage. nil (.offset x) (.nextOffset x) nil (.key msg) (byte-buffer-bytes (.payload msg)))))
 
   Broker
   (to-clojure [x]
