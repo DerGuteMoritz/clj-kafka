@@ -21,7 +21,8 @@
        (expect :host "localhost"
                :jmx_port -1
                :port 9999
-               :version 1))
+               :version 1
+               (comp number? :broker-id) true))
 
 (given (with-test-broker config
                          (controller zk-connect))

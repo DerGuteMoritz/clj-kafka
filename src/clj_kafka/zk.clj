@@ -10,13 +10,13 @@
   [m]
   (with-resource [z (zk/connect (get m "zookeeper.connect"))]
     zk/close
-    (if-let [broker-ids (zk/children z "/brokers/ids")]
-      (doall (map (comp #(read-str % :key-fn keyword)
-                        #(String. ^bytes %)
-                        :data
-                        #(zk/data z (str "/brokers/ids/" %)))
-                  broker-ids))
-      '())))
+    (mapv (fn [^String id]
+            (-> (zk/data z (str "/brokers/ids/" id))
+                ^bytes (:data)
+                (String.)
+                (read-str :key-fn keyword)
+                (assoc :broker-id (Long/valueOf id))))
+          (zk/children z "/brokers/ids"))))
 
 (defn broker-list
   "Returns a comma separated list of Kafka brokers, as returned from clj-kafka.zk/brokers.
